@@ -2,7 +2,7 @@ package com.fiap.challenge.quod.antifraude_backend.controller;
 
 import com.fiap.challenge.quod.antifraude_backend.dto.DocumentoResponse;
 import com.fiap.challenge.quod.antifraude_backend.filter.TokenAuthenticationFilter;
-import com.fiap.challenge.quod.antifraude_backend.service.DocumentoService;
+import com.fiap.challenge.quod.antifraude_backend.orchestrator.FraudOrchestrator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ class DocumentoControllerTest {
     private MockMvc mvc;
 
     @MockitoBean
-    private DocumentoService service;
+    private FraudOrchestrator orchestrator;
 
     @MockitoBean
     private TokenAuthenticationFilter tokenAuthenticationFilter;
@@ -43,13 +43,10 @@ class DocumentoControllerTest {
     @Test
     @DisplayName("POST /api/usuarios/{id}/documentos → 200 OK")
     void documento_validShouldReturn200() throws Exception {
-        // Stub passa a usar any(MultipartFile.class)
-        when(service.validarDocumento(
-                eq("42"),
-                eq("RG"),
-                any(MultipartFile.class),
-                any(MultipartFile.class))
-        ).thenReturn(new DocumentoResponse(true, "OK"));
+        when(orchestrator.processarDocumento(
+                eq("42"), eq("RG"),
+                any(MultipartFile.class), any(MultipartFile.class)))
+                .thenReturn(new DocumentoResponse(true, "OK"));
 
         MockMultipartFile doc = new MockMultipartFile(
                 "documento", "doc.pdf",
@@ -65,8 +62,7 @@ class DocumentoControllerTest {
         mvc.perform(multipart("/api/usuarios/42/documentos")
                         .file(doc)
                         .file(face)
-                        .param("tipoDocumento", "RG")
-                )
+                        .param("tipoDocumento", "RG"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.valid").value(true))
@@ -76,12 +72,10 @@ class DocumentoControllerTest {
     @Test
     @DisplayName("POST /api/usuarios/{id}/documentos → 422 Unprocessable Entity")
     void documento_invalidShouldReturn422() throws Exception {
-        when(service.validarDocumento(
-                eq("42"),
-                eq("CNH"),
-                any(MultipartFile.class),
-                any(MultipartFile.class))
-        ).thenReturn(new DocumentoResponse(false, "OCR falhou"));
+        when(orchestrator.processarDocumento(
+                eq("42"), eq("CNH"),
+                any(MultipartFile.class), any(MultipartFile.class)))
+                .thenReturn(new DocumentoResponse(false, "OCR falhou"));
 
         MockMultipartFile doc = new MockMultipartFile(
                 "documento", "doc.pdf",
@@ -97,8 +91,7 @@ class DocumentoControllerTest {
         mvc.perform(multipart("/api/usuarios/42/documentos")
                         .file(doc)
                         .file(face)
-                        .param("tipoDocumento", "CNH")
-                )
+                        .param("tipoDocumento", "CNH"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.valid").value(false))

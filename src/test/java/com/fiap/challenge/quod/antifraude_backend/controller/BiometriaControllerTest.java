@@ -2,7 +2,7 @@ package com.fiap.challenge.quod.antifraude_backend.controller;
 
 import com.fiap.challenge.quod.antifraude_backend.dto.BiometriaResponse;
 import com.fiap.challenge.quod.antifraude_backend.filter.TokenAuthenticationFilter;
-import com.fiap.challenge.quod.antifraude_backend.service.BiometriaService;
+import com.fiap.challenge.quod.antifraude_backend.orchestrator.FraudOrchestrator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +14,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.multipart.MultipartFile;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -31,24 +32,24 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BiometriaControllerTest {
 
     @Autowired
-    MockMvc mvc;
+    private MockMvc mvc;
 
     @MockitoBean
-    TokenAuthenticationFilter tokenAuthenticationFilter;
+    private FraudOrchestrator orchestrator;
 
     @MockitoBean
-    BiometriaService service;
+    private TokenAuthenticationFilter tokenAuthenticationFilter;
 
     @Test
     @DisplayName("POST /api/usuarios/{id}/biometria/facial → 200 OK")
     void facial_validShouldReturn200() throws Exception {
-        when(service.validarBiometriaFacial(eq("1"), any()))
+        when(orchestrator.processarBiometriaFacial(eq("1"), any(MultipartFile.class)))
                 .thenReturn(new BiometriaResponse(true, "OK"));
 
         MockMultipartFile foto = new MockMultipartFile(
-                "imagem","face.jpg",
+                "imagem", "face.jpg",
                 MediaType.IMAGE_JPEG_VALUE,
-                new byte[]{0x01,0x02}
+                new byte[]{0x01, 0x02}
         );
 
         mvc.perform(multipart("/api/usuarios/1/biometria/facial")
@@ -62,11 +63,11 @@ class BiometriaControllerTest {
     @Test
     @DisplayName("POST /api/usuarios/{id}/biometria/facial → 422 Unprocessable Entity")
     void facial_invalidShouldReturn422() throws Exception {
-        when(service.validarBiometriaFacial(eq("1"), any()))
+        when(orchestrator.processarBiometriaFacial(eq("1"), any(MultipartFile.class)))
                 .thenReturn(new BiometriaResponse(false, "Arquivo vazio"));
 
         MockMultipartFile foto = new MockMultipartFile(
-                "imagem","empty.jpg",
+                "imagem", "empty.jpg",
                 MediaType.IMAGE_JPEG_VALUE,
                 new byte[0]
         );
@@ -81,11 +82,11 @@ class BiometriaControllerTest {
     @Test
     @DisplayName("POST /api/usuarios/{id}/biometria/digital → 200 OK")
     void digital_validShouldReturn200() throws Exception {
-        when(service.validarBiometriaDigital(eq("1"), any()))
+        when(orchestrator.processarBiometriaDigital(eq("1"), any(MultipartFile.class)))
                 .thenReturn(new BiometriaResponse(true, "OK"));
 
         MockMultipartFile arquivo = new MockMultipartFile(
-                "arquivo","scan.bin",
+                "arquivo", "scan.bin",
                 MediaType.APPLICATION_OCTET_STREAM_VALUE,
                 new byte[]{0x0A}
         );
@@ -99,11 +100,11 @@ class BiometriaControllerTest {
     @Test
     @DisplayName("POST /api/usuarios/{id}/biometria/digital → 422 Unprocessable Entity")
     void digital_invalidShouldReturn422() throws Exception {
-        when(service.validarBiometriaDigital(eq("1"), any()))
+        when(orchestrator.processarBiometriaDigital(eq("1"), any(MultipartFile.class)))
                 .thenReturn(new BiometriaResponse(false, "Arquivo vazio"));
 
         MockMultipartFile arquivo = new MockMultipartFile(
-                "arquivo","empty.bin",
+                "arquivo", "empty.bin",
                 MediaType.APPLICATION_OCTET_STREAM_VALUE,
                 new byte[0]
         );
