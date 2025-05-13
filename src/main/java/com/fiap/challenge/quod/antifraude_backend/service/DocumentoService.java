@@ -25,6 +25,11 @@ public class DocumentoService {
                                               String tipoDocumento,
                                               MultipartFile docFoto,
                                               MultipartFile faceFoto) {
+
+        if (!"RG".equalsIgnoreCase(tipoDocumento) && !"CNH".equalsIgnoreCase(tipoDocumento)) {
+            return gravarENotificar(usuarioId, tipoDocumento, false, "Tipo de documento inválido");
+        }
+
         // 1) validações básicas
         if (docFoto.isEmpty()) {
             return gravarENotificar(usuarioId, tipoDocumento, false, "Foto do documento vazia");
