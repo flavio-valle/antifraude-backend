@@ -1,9 +1,10 @@
 package com.fiap.challenge.quod.antifraude_backend.dto;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 // Login
 @Data
 public class LoginRequest {
-    private String email;
-    private String pass;
+    @NotBlank private String email;
+    @NotBlank private String pass;
 }
