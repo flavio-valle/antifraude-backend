@@ -1,7 +1,5 @@
 package com.fiap.challenge.quod.antifraude_backend.orchestrator;
 
-
-import com.fiap.challenge.quod.antifraude_backend.messaging.KafkaEventPublisher;
 import com.fiap.challenge.quod.antifraude_backend.dto.BiometriaResponse;
 import com.fiap.challenge.quod.antifraude_backend.dto.DocumentoResponse;
 import com.fiap.challenge.quod.antifraude_backend.service.BiometriaService;
@@ -20,7 +18,6 @@ class FraudOrchestratorTest {
 
     private BiometriaService biometriaService;
     private DocumentoService documentoService;
-    private KafkaEventPublisher publisher;   // << mock
 
     private FraudOrchestrator orchestrator;
 
@@ -28,11 +25,9 @@ class FraudOrchestratorTest {
     void setup() {
         biometriaService = mock(BiometriaService.class);
         documentoService = mock(DocumentoService.class);
-        publisher        = mock(KafkaEventPublisher.class);
 
         orchestrator = new FraudOrchestrator(biometriaService,
-                documentoService,
-                publisher);
+                documentoService);
     }
 
     @Test
