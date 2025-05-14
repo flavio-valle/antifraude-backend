@@ -2,6 +2,7 @@ package com.fiap.challenge.quod.antifraude_backend.orchestrator;
 
 import com.fiap.challenge.quod.antifraude_backend.dto.BiometriaResponse;
 import com.fiap.challenge.quod.antifraude_backend.dto.DocumentoResponse;
+import com.fiap.challenge.quod.antifraude_backend.messaging.KafkaEventPublisher;
 import com.fiap.challenge.quod.antifraude_backend.service.BiometriaService;
 import com.fiap.challenge.quod.antifraude_backend.service.DocumentoService;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,9 @@ class FraudOrchestratorTest {
 
     @Mock
     private DocumentoService documentoService;
+
+    @Mock               // ➜ adiciona isto
+    private KafkaEventPublisher publisher;
 
     @InjectMocks
     private FraudOrchestrator orchestrator;
