@@ -2,30 +2,34 @@ name: Build & Deploy to Azure
 
 on:
   push:
-    branches: [ "master" ]         # gatilho único
-  workflow_dispatch:               # permite disparo manual
+    branches: [ "master" ]
+  workflow_dispatch:
 
 env:
-  IMAGE_NAME: antifraude
-  REGISTRY: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+  # ↳ edite somente se mudar o nome do ACR ou da imagem
+  REGISTRY_NAME:       quodacr
+  REGISTRY_LOGIN:      quodacr.azurecr.io
+  IMAGE_NAME:          antifraude
 
 jobs:
   build-test-push:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04          # evita problema do Flapdoodle 6.0.5
+
+    outputs:
+      image: ${{ steps.build-image.outputs.image }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # JDK + Maven cache automático
-      - name: Set up JDK 17
+      - name: Set up JDK 17 + Maven cache
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-          cache: 'maven'
+          cache: maven
 
-      # Testes em modo quiet; salva log somente se falhar
+      # -------------------- TESTES --------------------
       - name: Run unit & integration tests (quiet)
         id: maven-test
         run: |
@@ -33,26 +37,27 @@ jobs:
           ./mvnw -B -q -ntp clean test > test.log 2>&1
         shell: bash
 
-      # Upload do log SOMENTE quando os testes falharem
       - name: Upload full test log on failure
         if: failure() && steps.maven-test.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: test-log
           path: test.log
+      # ------------------------------------------------
 
-      - name: Log in to ACR
-        uses: azure/docker-login@v2
+      - name: Azure login (service-principal)
+        uses: azure/login@v2
         with:
-          login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-          username:      ${{ secrets.REGISTRY_USERNAME }}
-          password:      ${{ secrets.REGISTRY_PASSWORD }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR via Azure CLI
+        run: az acr login --name ${{ env.REGISTRY_NAME }}
 
       - name: Build & push Docker image
         id: build-image
         run: |
-          TAG=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker build -t "$TAG" .
+          TAG=${{ env.REGISTRY_LOGIN }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker build --pull --tag "$TAG" .
           docker push  "$TAG"
           echo "image=$TAG" >> "$GITHUB_OUTPUT"
 
@@ -61,7 +66,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Azure Login
+      - name: Azure login (service-principal)
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
