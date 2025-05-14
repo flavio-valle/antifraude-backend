@@ -1,8 +1,9 @@
 package com.fiap.challenge.quod.antifraude_backend.orchestrator;
 
+
+import com.fiap.challenge.quod.antifraude_backend.messaging.KafkaEventPublisher;
 import com.fiap.challenge.quod.antifraude_backend.dto.BiometriaResponse;
 import com.fiap.challenge.quod.antifraude_backend.dto.DocumentoResponse;
-import com.fiap.challenge.quod.antifraude_backend.messaging.KafkaEventPublisher;
 import com.fiap.challenge.quod.antifraude_backend.service.BiometriaService;
 import com.fiap.challenge.quod.antifraude_backend.service.DocumentoService;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,24 +14,25 @@ import org.springframework.web.multipart.MultipartFile;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 class FraudOrchestratorTest {
 
-    @Mock
     private BiometriaService biometriaService;
-
-    @Mock
     private DocumentoService documentoService;
+    private KafkaEventPublisher publisher;   // << mock
 
-    @Mock               // ➜ adiciona isto
-    private KafkaEventPublisher publisher;
-
-    @InjectMocks
     private FraudOrchestrator orchestrator;
 
     @BeforeEach
     void setup() {
-        MockitoAnnotations.openMocks(this);
+        biometriaService = mock(BiometriaService.class);
+        documentoService = mock(DocumentoService.class);
+        publisher        = mock(KafkaEventPublisher.class);
+
+        orchestrator = new FraudOrchestrator(biometriaService,
+                documentoService,
+                publisher);
     }
 
     @Test
