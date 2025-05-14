@@ -2,11 +2,11 @@ name: Build & Deploy to Azure
 
 on:
   push:
-    branches: [ "master" ]      # gatilho único para a branch master
-  workflow_dispatch:            # permite disparo manual no GitHub UI
+    branches: [ "master" ]         # gatilho único
+  workflow_dispatch:               # permite disparo manual
 
 env:
-  IMAGE_NAME: antifraude        # repositório no ACR
+  IMAGE_NAME: antifraude
   REGISTRY: ${{ secrets.REGISTRY_LOGIN_SERVER }}
 
 jobs:
@@ -17,23 +17,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run unit & integration tests
-        run: ./mvnw -B clean test
+      # JDK + Maven cache automático
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: 'maven'
+
+      # Testes em modo quiet; salva log somente se falhar
+      - name: Run unit & integration tests (quiet)
+        id: maven-test
+        run: |
+          set -e
+          ./mvnw -B -q -ntp clean test > test.log 2>&1
+        shell: bash
+
+      # Upload do log SOMENTE quando os testes falharem
+      - name: Upload full test log on failure
+        if: failure() && steps.maven-test.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: test.log
 
       - name: Log in to ACR
         uses: azure/docker-login@v2
         with:
           login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
+          username:      ${{ secrets.REGISTRY_USERNAME }}
+          password:      ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Build & push Docker image
         id: build-image
         run: |
           TAG=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker build -t $TAG .
-          docker push $TAG
-          echo "image=$TAG" >> $GITHUB_OUTPUT
+          docker build -t "$TAG" .
+          docker push  "$TAG"
+          echo "image=$TAG" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: build-test-push
@@ -48,6 +69,6 @@ jobs:
       - name: Deploy to Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ secrets.WEBAPP_NAME }}
-          images: ${{ needs.build-test-push.outputs.image }}
+          app-name:       ${{ secrets.WEBAPP_NAME }}
           resource-group: ${{ secrets.RESOURCE_GROUP }}
+          images:         ${{ needs.build-test-push.outputs.image }}
